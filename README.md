@@ -1,179 +1,82 @@
 # BrainFood
 
-**A lightweight, high-signal curation and atomic grounding layer for local AI agent workflows.**
+**A lightweight, high-signal curation and atomic grounding layer for agent memory stacks.**
 
-Most agent memory systems are good at storing information but weak at protecting quality. They often ingest noisy, low-signal, or stubby content, which leads to *context rot* over time. BrainFood addresses this by applying strict quality gates during ingestion and maintaining a clean **Atomic Registry** of structured, high-value components that agents can reliably use for code editing and system work.
+Most memory systems are good at storing information, but weak at protecting quality. They ingest noise, stubs, and low-signal content, which leads to context rot — especially painful in long-running coding agents and system work.
 
-BrainFood is designed to work as a layer alongside existing tools such as [Cognee](https://github.com/cognee-ai/cognee), QMD, and GBrain. It does not aim to replace full memory graphs. Instead, it focuses on **curation quality** and **atomic cleanliness**.
+**BrainFood** fixes the upstream problem. It applies strict quality gates and maintains a clean **Atomic Registry** of structured, high-value components that agents can actually trust and use.
 
----
+### The Goal
 
-## Core Promise
+BrainFood is built as a **thin, optional layer** — not another full memory platform. It’s designed to be **easy to drop into existing stacks** (Cognee, QMD, GBrain, LangGraph, custom agents, etc.) with minimal friction.
 
-> Feed your agents cleaner, more reliable, and better-structured context with significantly less noise and context rot.
-
-## Default Ingestion
-
-BrainFood includes **Wipedown** integration enabled by default. Wipedown serves as the zero-trust semantic scraping and prompt injection defense layer. Users can easily disable it via configuration if they prefer to use their own ingestion pipeline.
+You don’t have to rip out what you already have. You just get better quality and cleaner atomic components on top.
 
 ---
 
-## Architecture Overview
+## BrainFoodAgent — The Easy Plug-in
 
-### Core Philosophy
+The main way to use BrainFood is through a simple, stable interface:
 
-- Prioritize **quality curation** over volume
-- Favor **atomic, structured components** over fuzzy chunks
-- Treat Wipedown as the **recommended but optional** ingestion layer
-- Keep BrainFood usable **with or without** Wipedown
+```python
+from brainfood.agent import BrainFoodAgent
 
-### High-Level Architecture
+brain = BrainFoodAgent()
 
-```
-                      AGENT LAYER
-   (LangGraph, CrewAI, Cline, Aider, Custom, etc.)
-          |
-          v
-+-------------------------------------------+
-|           BrainFoodAgent                  |
-|  (Public API)                             |
-|  - get_context(query)                     |
-|  - get_atomic(category, name)             |
-|  - Simple and stable interface            |
-+-------------------------------------------+
-          |               |
-          v               v
-+---------------+  +-----------------+
-| ATOMIC REGISTRY |  |  QUALITY GATES  |
-| Clean components|  |  Pydantic-based |
-| Schema validated|  |  Rejection logic|
-+---------------+  +-----------------+
-          |
-          v
-+------------------+    +------------------+
-| Wipedown Layer   |    |   Direct / Custom|
-| (Default: ON)    |    |   Ingestion      |
-| - CLI integration|    | - Local folders  |
-| - Toggleable     |    | - Markdown       |
-| - Zero-trust     |    | - Other sources  |
-+------------------+    +------------------+
+# Get high-signal context
+context = brain.get_context("How should error handling work here?")
+
+# Pull a clean atomic component directly
+component = brain.get_atomic("development", "error_handling")
 ```
 
-### Wipedown Integration Rules
-
-| Aspect | Decision |
-|---|---|
-| **Default state** | Wipedown integration enabled |
-| **How to disable** | Config flag (`use_wipedown: false`) |
-| **Primary integration** | Wipedown CLI |
-| **Direct integration** | Supported as optional/advanced path |
-| **Documentation** | Clearly explain both options |
-| **Coupling** | Loose (CLI-based by default) |
-| **Philosophy** | Wipedown as recommended companion, not hard dependency |
-
-### Recommended Data Flow (Default)
-
-1. Content is processed by Wipedown (zero-trust filtering)
-2. Cleaned output is passed to BrainFood
-3. BrainFood applies additional quality gates
-4. High-signal data is written to the Atomic Registry
-5. Agents retrieve clean context using `BrainFoodAgent`
-
-Users who disable Wipedown can point BrainFood directly at folders or other sources.
+This is intentionally lightweight so agents can start using it with almost zero setup.
 
 ---
 
-## Detailed Build Plan
+## How It Fits In Your Stack
 
-### Phase 0: Foundations
+BrainFood works **alongside** your existing tools:
 
-- Initialize clean repository structure
-- Create strong README with positioning
-- Define `brainfood.yaml` configuration schema (including Wipedown toggle)
-- Set up packaging and basic CLI entrypoint
-- Add MIT license and contribution guidelines
+| Your Current Stack     | How BrainFood Helps                              |
+|------------------------|--------------------------------------------------|
+| Cognee                 | Adds quality curation + atomic components        |
+| QMD                    | Adds structured/atomic retrieval                 |
+| GBrain / Custom        | Adds a clean quality + atomic layer              |
+| LangGraph / CrewAI     | Drop `BrainFoodAgent` into your agent loop       |
 
-### Phase 1: Core + Wipedown Integration (Priority)
-
-**Goals:**
-
-- Deliver working curation and atomic registry
-- Make Wipedown CLI the default ingestion path
-- Allow users to disable Wipedown easily
-
-**Key Deliverables:**
-
-#### Configuration System
-
-```yaml
-use_wipedown: true        # Default: enabled
-wipedown_path: "/path/to/wipedown"  # Configurable path to Wipedown binary
-```
-
-#### Wipedown Integration Module
-
-- **Location:** `brainfood/integrations/wipedown.py`
-- Primary support for Wipedown CLI
-- Optional direct Python mode for advanced users
-- Good error handling and diagnostics
-
-#### BrainFoodAgent Interface
-
-- Clean, stable public API
-- Works regardless of Wipedown setting
-
-#### Quality Gates + Atomic Registry
-
-- Pydantic-based schemas and rejection logic
-- Clean component storage and retrieval
-
-#### Ingestion Support
-
-- Handle output from Wipedown
-- Fallback support for direct folder ingestion
-
-#### Phase 1 Success Criteria
-
-A user can install BrainFood, use it with Wipedown enabled by default, and disable Wipedown with one configuration change while retaining full functionality.
-
-### Phase 2: Polish & Usability
-
-- Improve CLI commands (`brainfood ingest`, `status`, etc.)
-- Add clear documentation and examples for:
-  - Default flow (Wipedown + BrainFood)
-  - BrainFood without Wipedown
-  - Integration with Cognee, LangGraph, etc.
-- Enhance logging around the Wipedown step
-- Add optional lightweight graph capabilities
-
-### Phase 3: Ecosystem & Distribution
-
-- Publish to PyPI
-- Create example repositories showing both flows
-- Strengthen recommended stack messaging (Wipedown + BrainFood)
-- Prepare contribution and integration guides
+Use it standalone, as a pre-filter, or as an extra high-signal source. Your choice.
 
 ---
 
-## Quick Start
+## Core Concepts
 
-```bash
-# Install BrainFood
-pip install brainfood
+| Concept             | What It Does                                      | Why It Matters |
+|---------------------|---------------------------------------------------|----------------|
+| **Quality Gates**   | Rejects low-quality, stubby, or noisy content     | Prevents context rot |
+| **Atomic Registry** | Stores clean, structured, production-ready components | Reliable grounding for code work |
+| **BrainFoodAgent**  | Simple public interface (`get_context`, `get_atomic`) | Easy to plug into any agent |
+| **Optional Layers** | Wipedown, custom ingestion, graph — all toggleable | High adaptability |
 
-# Configure (Wipedown enabled by default)
-# Edit ~/.config/brainfood/brainfood.yaml
-```
+---
 
-## Configuration
+## Project Philosophy
 
-```yaml
-# brainfood.yaml
-use_wipedown: true
-wipedown_path: "/usr/local/bin/wipedown"
-data_dir: "~/.brainfood/data"
-```
+- **Lean first** — We optimize for easy integration over building everything ourselves.
+- **Quality over volume** — We aggressively filter noise.
+- **Malleable by design** — You should be able to use as much or as little as you want.
+- **Reference, not replacement** — Works with (not instead of) tools like Cognee, QMD, and GBrain.
+
+---
+
+## Status
+
+Early development. Core ideas and structure are being built now.
+
+More documentation and examples coming as we ship the first usable version.
+
+---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT
