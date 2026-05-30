@@ -1,82 +1,70 @@
-# BrainFood
+# BrainFood v0.1 Scope
 
-**A lightweight, high-signal curation and atomic grounding layer for agent memory stacks.**
+This document outlines what v0.1 of BrainFood aims to deliver and the current status of each area.
 
-Most memory systems are good at storing information, but weak at protecting quality. They ingest noise, stubs, and low-signal content, which leads to context rot — especially painful in long-running coding agents and system work.
+## Goal of v0.1
 
-**BrainFood** fixes the upstream problem. It applies strict quality gates and maintains a clean **Atomic Registry** of structured, high-value components that agents can actually trust and use.
+Create a **minimal but functional and installable** version of BrainFood that demonstrates the core value:
 
-### The Goal
+- Easy to install and use
+- Quality gates that protect against low-quality content
+- Atomic Registry for clean, structured components
+- Simple `BrainFoodAgent` interface that can be plugged into other stacks
 
-BrainFood is built as a **thin, optional layer** — not another full memory platform. It’s designed to be **easy to drop into existing stacks** (Cognee, QMD, GBrain, LangGraph, custom agents, etc.) with minimal friction.
+v0.1 is **not** trying to be feature-complete. It is a foundation to validate the approach and enable local testing.
 
-You don’t have to rip out what you already have. You just get better quality and cleaner atomic components on top.
+## Current Status
 
----
+### 1. Package & Structure
+- [x] Package installs cleanly with `pip install -e .`
+- [x] Proper `pyproject.toml` and `__init__.py` files
 
-## BrainFoodAgent — The Easy Plug-in
+### 2. BrainFoodAgent (Main Public Interface)
+- [x] `BrainFoodAgent` class exists and is importable
+- [x] `ingest(content, category)` works with validation
+- [x] `get_atomic(category, name)` retrieves components
+- [x] `get_context(query)` returns stored components with basic relevance scoring
+- [x] `score_atomic(category, name)` returns quality score (0.0–1.0)
 
-The main way to use BrainFood is through a simple, stable interface:
+### 3. Quality Gates
+- [x] Basic rejection of low-quality / stub / TODO content
+- [x] `score_component()` for quality scoring (0.0–1.0)
 
-```python
-from brainfood.agent import BrainFoodAgent
+### 4. Atomic Registry
+- [x] File-based storage for atomic components
+- [x] Save, retrieve, and list by category
+- [x] Configurable `data_dir` via `BrainFoodAgent`
 
-brain = BrainFoodAgent()
+### 5. Curator & Ingestion Pipeline
+- [ ] Proper Curator that converts raw input into structured components
+- [ ] Support for text, files, and URLs
 
-# Get high-signal context
-context = brain.get_context("How should error handling work here?")
+### 6. Wipedown Integration
+- [ ] Optional, clean integration with Wipedown for safe ingestion
+- [ ] Config toggle for Wipedown
 
-# Pull a clean atomic component directly
-component = brain.get_atomic("development", "error_handling")
-```
+### 7. Testing & Examples
+- [x] Basic working example that proves the core loop
+- [ ] Unit tests for core classes
+- [ ] More examples showing different use cases
 
-This is intentionally lightweight so agents can start using it with almost zero setup.
+### 8. Documentation & Readiness
+- [x] Positioning and philosophy documented
+- [x] Local testing instructions added
+- [x] `v0.1-scope.md` created with detailed checklist
+- [ ] Full documentation and API docs
+- [ ] README fully synced with current implementation
 
----
+## Overall Assessment
 
-## How It Fits In Your Stack
+**v0.1 has a working, installable foundation.**
 
-BrainFood works **alongside** your existing tools:
+The core loop (ingest → quality gates → atomic registry → retrieval) is functional and testable locally. Quality scoring has been added to both the gates and the agent interface.
 
-| Your Current Stack     | How BrainFood Helps                              |
-|------------------------|--------------------------------------------------|
-| Cognee                 | Adds quality curation + atomic components        |
-| QMD                    | Adds structured/atomic retrieval                 |
-| GBrain / Custom        | Adds a clean quality + atomic layer              |
-| LangGraph / CrewAI     | Drop `BrainFoodAgent` into your agent loop       |
+Major areas that still need work before a polished release:
+- Curator depth and raw input handling
+- Wipedown integration
+- Testing
+- Documentation
 
-Use it standalone, as a pre-filter, or as an extra high-signal source. Your choice.
-
----
-
-## Core Concepts
-
-| Concept             | What It Does                                      | Why It Matters |
-|---------------------|---------------------------------------------------|----------------|
-| **Quality Gates**   | Rejects low-quality, stubby, or noisy content     | Prevents context rot |
-| **Atomic Registry** | Stores clean, structured, production-ready components | Reliable grounding for code work |
-| **BrainFoodAgent**  | Simple public interface (`get_context`, `get_atomic`) | Easy to plug into any agent |
-| **Optional Layers** | Wipedown, custom ingestion, graph — all toggleable | High adaptability |
-
----
-
-## Project Philosophy
-
-- **Lean first** — We optimize for easy integration over building everything ourselves.
-- **Quality over volume** — We aggressively filter noise.
-- **Malleable by design** — You should be able to use as much or as little as you want.
-- **Reference, not replacement** — Works with (not instead of) tools like Cognee, QMD, and GBrain.
-
----
-
-## Status
-
-Early development. Core ideas and structure are being built now.
-
-More documentation and examples coming as we ship the first usable version.
-
----
-
-## License
-
-MIT
+This scope document will be updated as v0.1 progresses.
