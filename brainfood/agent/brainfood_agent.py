@@ -15,11 +15,34 @@ class BrainFoodAgent:
         return self.registry.get(category, name)
 
     def get_context(self, query: str, max_items: int = 5) -> List[Dict]:
-        results = []
-        for cat in ["development", "misc"]:
-            names = self.registry.list_components(cat)
-            for name in names[:max_items]:
-                comp = self.registry.get(cat, name)
-                if comp:
-                    results.append(comp)
-        return results[:max_items]
+        """
+        Get relevant context using simple keyword matching.
+        Scores components based on how many query words appear in name/title/content.
+        """
+        query_words = set(query.lower().split())
+        scored = []
+
+        for category in ["development", "misc"]:
+            names = self.registry.list_components(category)
+            for name in names:
+                comp = self.registry.get(category, name)
+                if not comp:
+                    continue
+
+                # Build searchable text
+                text = " ".join([
+                    str(comp.get("name", "")),
+                    str(comp.get("title", "")),
+                    str(comp.get("full_code", "")),
+                    str(comp.get("description", ""))
+                ]).lower()
+
+                # Simple score = number of matching query words
+                score = sum(1 for word in query_words if word in text)
+
+                if score > 0:
+                    scored.append((score, comp))
+
+        # Sort by score descending and return top results
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [comp for score, comp in scored[:max_items]]
