@@ -2,7 +2,8 @@
 """
 BrainFoodAgent - Main public interface for BrainFood v0.1
 
-Lightweight high-signal curation layer for agent memory stacks.
+Wipedown is used only as a security status check (default = on).
+Flagged content goes to 'flagged_for_review' category instead of being rejected.
 """
 from typing import Optional, Dict, Any, List
 
@@ -15,19 +16,17 @@ except ImportError:
 
 
 class BrainFoodAgent:
-    def __init__(self, data_dir: str = "~/.brainfood/registry"):
+    def __init__(self, data_dir: str = "~/.brainfood/registry", enable_wipedown: bool = True):
         self.registry = AtomicRegistry(data_dir)
-        self.curator = Curator(registry=self.registry)
+        self.curator = Curator(registry=self.registry, enable_wipedown=enable_wipedown)
 
     def ingest(self, content: Any, category: str = "misc") -> bool:
-        """Ingest raw text, dict, file path, or URL. Returns True on success."""
         return self.curator.ingest(content, category=category)
 
     def get_atomic(self, category: str, name: str) -> Optional[Dict[str, Any]]:
         return self.registry.get(category, name)
 
     def get_context(self, query: str, max_items: int = 5) -> List[Dict[str, Any]]:
-        """Dynamically searches across all existing categories."""
         results = []
         for cat in self.registry.list_categories():
             for comp in self.registry.list_by_category(cat):
