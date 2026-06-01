@@ -66,7 +66,7 @@ BrainFoodAgent(data_dir="~/.brainfood/registry")
 |--------|-------------|
 | `ingest(content, category="misc")` | Ingests dict, raw text, file path, or URL. Runs quality gates automatically. |
 | `get_atomic(category, name)` | Retrieve a specific high-signal component. |
-| `get_context(query, max_items=5)` | Basic keyword-based retrieval of relevant components. |
+| `get_context(query, max_items=5)` | Basic keyword-based retrieval across all categories. |
 | `score_atomic(category, name)` | Returns quality score (0.0–1.0) of a stored component. |
 
 ---
@@ -90,27 +90,35 @@ BrainFood is designed as a **thin, trustworthy filter** you can place in front o
 ```python
 component = {
     "name": "unique_component_name",
-    "category": "development",           # or quant_finance, biophysics_health, misc
-    "full_code": "...",                    # full working code when available
+    "category": "your_category_name",     # fully dynamic - use what makes sense for you
+    "full_code": "...",
     "description": "One-sentence purpose",
-    "quality_score": 0.92                  # optional, will be calculated if missing
 }
 brain.ingest(component)
 ```
 
 #### Pattern 2: Raw Text / Markdown Ingestion
 ```python
-brain.ingest(raw_markdown_or_code, category="development")
+brain.ingest(raw_markdown_or_code, category="your_category")
 ```
 
 #### Pattern 3: Retrieving for Grounding
 ```python
-# Get exact component
-comp = brain.get_atomic("development", "retry_with_backoff")
-
-# Get relevant context for a task
-context_pieces = brain.get_context("retry logic and error handling", max_items=5)
+comp = brain.get_atomic("your_category", "component_name")
+context_pieces = brain.get_context("retry logic", max_items=5)
 ```
+
+### Categories Are Fully Dynamic
+
+You are **not** limited to any predefined set of categories. Use whatever taxonomy makes sense for your domain and workflow:
+
+- `development`, `backend`, `frontend`, `infra`
+- `trading`, `quant_finance`, `mev`
+- `health`, `biohacking`, `light_environment`
+- `research`, `papers`, `ideas`
+- Or anything else
+
+BrainFood will automatically create the necessary directories and discover categories at runtime.
 
 ### Quality & Rejection Rules
 
@@ -128,14 +136,6 @@ By default components are stored in `~/.brainfood/registry/`. You can override t
 brain = BrainFoodAgent(data_dir="/custom/path/registry")
 ```
 
-### Categories
-
-Use these category names for best results:
-- `development`
-- `quant_finance`
-- `biophysics_health`
-- `misc`
-
 ---
 
 ## Project Philosophy
@@ -149,13 +149,13 @@ Use these category names for best results:
 
 ## Current Status
 
-See `v0.1-scope.md` for the latest checklist of implemented vs planned features.
+See `v0.1-scope.md` for the latest checklist.
 
-**Recently hardened (v0.1.1):**
-- `AtomicRegistry.save()` now properly protects higher-quality components
+**Recently hardened:**
+- Categories are now fully dynamic (no hardcoded taxonomy)
+- `AtomicRegistry.save()` protects higher-quality components
 - `curate_file()` and `curate_url()` are fully functional
-- Improved name/description/code extraction
-- Cleaner quality scoring with early rejection
+- Improved extraction and quality scoring
 
 ---
 
