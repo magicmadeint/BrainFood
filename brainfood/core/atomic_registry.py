@@ -8,14 +8,19 @@ class AtomicRegistry:
     def __init__(self, data_dir: str = "~/.brainfood/registry"):
         self.base_path = Path(data_dir).expanduser()
         self.base_path.mkdir(parents=True, exist_ok=True)
-        for category in ["development", "quant_finance", "biophysics_health", "misc"]:
-            (self.base_path / category).mkdir(exist_ok=True)
+        # Categories are now fully dynamic - created on demand
+
+    def _ensure_category(self, category: str) -> Path:
+        """Ensure category directory exists and return its path."""
+        cat_path = self.base_path / category
+        cat_path.mkdir(exist_ok=True)
+        return cat_path
 
     def _get_path(self, component: Dict[str, Any]) -> Path:
         category = component.get("category", "misc")
         name = component.get("name", "unnamed")
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
-        return self.base_path / category / f"{safe_name}.json"
+        return self._ensure_category(category) / f"{safe_name}.json"
 
     def save(self, component: Dict[str, Any]) -> bool:
         """
@@ -66,6 +71,8 @@ class AtomicRegistry:
 
     def list_by_category(self, category: str) -> List[Dict[str, Any]]:
         cat_path = self.base_path / category
+        if not cat_path.exists():
+            return []
         results = []
         for f in cat_path.glob("*.json"):
             try:
@@ -74,6 +81,12 @@ class AtomicRegistry:
             except Exception:
                 continue
         return results
+
+    def list_categories(self) -> List[str]:
+        """Dynamically discover all categories that have components."""
+        if not self.base_path.exists():
+            return []
+        return [d.name for d in self.base_path.iterdir() if d.is_dir()]
 
     def score_atomic(self, category: str, name: str) -> float:
         comp = self.get(category, name)
