@@ -1,3 +1,4 @@
-from .agent.brainfood_agent import BrainFoodAgent
+from brainfood.agent import BrainFoodAgent
 
+__version__ = "0.1.1"
 __all__ = ["BrainFoodAgent"]
