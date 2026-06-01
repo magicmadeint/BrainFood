@@ -1,3 +1,3 @@
-from .brainfood_agent import BrainFoodAgent
+from ..agent import BrainFoodAgent
 
 __all__ = ["BrainFoodAgent"]
