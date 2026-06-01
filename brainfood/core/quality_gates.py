@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """
 Quality Gates for BrainFood.
-
-Early rejection of low-signal / stub / placeholder content.
 """
 import re
 from typing import Optional, Any, Dict
@@ -11,6 +9,8 @@ from typing import Optional, Any, Dict
 FORBIDDEN_PATTERNS = [
     r"#\s*(TODO|FIXME|placeholder|insert logic|logic to find|rest of|implement)",
     r"//\s*(TODO|FIXME|placeholder)",
+    r"\bTODO\b[:\s]",           # catches raw "TODO:" patterns
+    r"\bFIXME\b",
     r"pass\s*#\s*(logic|TODO|placeholder)",
     r"raise NotImplementedError",
     r"your (code|logic|implementation) here",
@@ -18,7 +18,6 @@ FORBIDDEN_PATTERNS = [
 
 
 def should_reject_content(text: str) -> bool:
-    """Hard reject if content contains obvious placeholder or stub markers."""
     if not text:
         return True
     lowered = text.lower()
@@ -31,23 +30,18 @@ def should_reject_content(text: str) -> bool:
 
 
 def validate_component(component: Any) -> bool:
-    """Backward compatible validation. Returns True if component looks usable."""
+    """More lenient: only rejects if name is missing or obvious low-quality markers are present."""
     if not isinstance(component, dict):
         return False
     if not component.get("name"):
         return False
-    # Basic quality check
-    text = str(component.get("full_code", "")) + str(component.get("description", ""))
+    text = str(component.get("full_code", "")) + " " + str(component.get("description", ""))
     return not should_reject_content(text)
 
 
 def score_component(text: str, code: Optional[str] = None) -> float:
-    """
-    Lightweight quality scoring (0.0 - 1.0).
-    """
     if not text:
         return 0.0
-
     score = 0.5
     if code and len(code) > 50:
         score += 0.25
@@ -57,5 +51,4 @@ def score_component(text: str, code: Optional[str] = None) -> float:
         score += 0.1
     if text.count("example") > 3:
         score -= 0.05
-
     return max(0.0, min(1.0, round(score, 2)))
