@@ -2,9 +2,7 @@
 
 **A lightweight, high-signal curation and atomic grounding layer for agent memory stacks.**
 
-Most memory systems are good at storing information, but weak at protecting quality. They ingest noise, stubs, and low-signal content, which leads to context rot — especially painful in long-running coding agents and system work.
-
-**BrainFood** fixes the upstream problem. It applies strict quality gates and maintains a clean **Atomic Registry** of structured, high-value components that agents can actually trust and use.
+BrainFood protects your agent memory from noise, stubs, and low-quality content. It applies strict quality gates and maintains a clean **Atomic Registry** of trustworthy components.
 
 ---
 
@@ -20,7 +18,7 @@ source .venv/bin/activate
 pip install -e .
 ```
 
-> **Optional but recommended:** `pip install wipedown` (from the malleable-cli branch) to enable security screening.
+> **Optional:** Install `wipedown` (malleable-cli branch) for built-in security classification.
 
 ---
 
@@ -29,75 +27,74 @@ pip install -e .
 ```python
 from brainfood.agent import BrainFoodAgent
 
-brain = BrainFoodAgent()  # wipedown enabled by default
+brain = BrainFoodAgent()                    # Wipedown enabled by default
 
+# Ingest structured components (recommended)
 brain.ingest({
     "name": "retry_with_backoff",
     "category": "development",
-    "full_code": "def retry_with_backoff(...): ..."
+    "full_code": "def retry_with_backoff(...): ...",
+    "description": "Handles retries with exponential backoff"
 })
+
+# Or ingest raw text, files, or URLs
+brain.ingest("Some clean documentation or code...", category="docs")
 
 atomic = brain.get_atomic("development", "retry_with_backoff")
 ```
 
 ---
 
-## BrainFoodAgent API
+## BrainFoodAgent
 
 ```python
 BrainFoodAgent(data_dir="~/.brainfood/registry", enable_wipedown=True)
 ```
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `enable_wipedown` | `True` | Run WipeDown security check before curation. Flagged content goes to `flagged_for_review`. |
+| Method              | Description                                      |
+|---------------------|--------------------------------------------------|
+| `ingest()`          | Ingest dict, text, file, or URL                  |
+| `get_atomic()`      | Retrieve a specific component                    |
+| `get_context()`     | Search across all categories                     |
+| `score_atomic()`    | Get quality score of a component                 |
+
+**`enable_wipedown`** (default `True`): Runs security classification. Flagged content is routed to `flagged_for_review` instead of being rejected.
 
 ---
 
-## For AI Agents (Integration Guide)
+## For AI Agents
 
-### How Wipedown + BrainFood Work Together
+BrainFood is designed to be used by agents. Key behaviors:
 
-Wipedown is used **only as a security classifier**.
+- **Wipedown** is used only as a security classifier (not for sanitization).
+- BrainFood **always curates the original content**.
+- Flagged items go to `flagged_for_review` (never silently dropped).
+- Categories are fully dynamic.
+- Dict ingestion is first-class and now properly validated + scored.
 
-- BrainFood runs wipedown to get a simple status (clean vs flagged).
-- **BrainFood always curates the original content** (not wipedown’s sanitized version).
-- If wipedown flags something suspicious, the component is saved under the `flagged_for_review` category instead of being rejected.
-- This allows you (or another agent) to still inspect it later.
-
-You can disable it completely:
-
+Disable security checks when needed:
 ```python
 brain = BrainFoodAgent(enable_wipedown=False)
 ```
 
-### Recommended Patterns
+---
 
-```python
-# Normal ingestion (wipedown runs by default)
-brain.ingest(raw_text_or_url, category="development")
+## Quality Model
 
-# Force a specific category even if flagged
-brain.ingest(content, category="sensitive_research")
-
-# Retrieve flagged items for review
-flagged = brain.get_context("flagged_for_review")
-```
-
-### Quality & Rejection Rules
-
-BrainFood will **hard reject** content containing obvious low-quality markers (`TODO`, `placeholder`, stubs, etc).
-
-Wipedown-flagged content is **not rejected** — it is routed to `flagged_for_review` for later inspection.
+- Hard rejects obvious low-quality content (`TODO`, `placeholder`, `NotImplementedError`, etc.)
+- Wipedown-flagged content is preserved under `flagged_for_review`
+- Higher-scoring components are protected from being overwritten by lower-scoring ones
 
 ---
 
-## Project Philosophy
+## Project Status (v0.1.1)
 
-- Lean first
-- Quality over volume
-- Wipedown for security classification only
-- Categories are fully dynamic
+- Core functionality stable and well tested
+- Strong support for both string and structured dict ingestion
+- Clean Wipedown integration (status only)
+- 79+ tests passing
+
+See `SKILL.md` for detailed guidance aimed at AI agents.
 
 ---
 
