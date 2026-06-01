@@ -27,9 +27,9 @@ class BrainFoodAgent:
         return self.registry.get(category, name)
 
     def get_context(self, query: str, max_items: int = 5) -> List[Dict[str, Any]]:
-        """Very basic keyword relevance for now."""
+        """Dynamically searches across all existing categories."""
         results = []
-        for cat in ["development", "quant_finance", "biophysics_health", "misc"]:
+        for cat in self.registry.list_categories():
             for comp in self.registry.list_by_category(cat):
                 if query.lower() in str(comp).lower():
                     results.append(comp)
