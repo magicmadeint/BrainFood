@@ -13,10 +13,10 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 
 try:
-    from brainfood.core.quality_gates import should_reject_content, score_component
+    from brainfood.core.quality_gates import should_reject_content, score_component, validate_component
     from brainfood.core.atomic_registry import AtomicRegistry
 except ImportError:
-    from quality_gates import should_reject_content, score_component
+    from quality_gates import should_reject_content, score_component, validate_component
     from atomic_registry import AtomicRegistry
 
 
@@ -27,59 +27,37 @@ class Curator:
         self._wipedown = None
 
     def _get_wipedown(self):
-        """Lazy load WipeDown if available."""
         if self._wipedown is not None:
             return self._wipedown
-
         try:
             from wipedown import WipeDown
             self._wipedown = WipeDown()
         except ImportError:
-            self._wipedown = False  # Mark as unavailable
+            self._wipedown = False
         return self._wipedown
 
     def _run_security_check(self, text: str, is_url: bool = False, target: str = "") -> str:
-        """
-        Run wipedown *only* to get security status.
-        Returns category to use (either original or 'flagged_for_review').
-        """
         if not self.enable_wipedown:
             return None
-
         wipedown = self._get_wipedown()
         if not wipedown:
-            return None  # wipedown not installed, skip silently
-
+            return None
         try:
             if is_url:
                 result = wipedown.wipe_url(target)
             else:
                 result = wipedown.wipe_text(text)
-
             status = result.get("status", "success")
-
-            # Treat anything other than clean success as flagged
             if status and status.lower() not in ("success", "clean"):
                 print(f"⚠️  WipeDown flagged content. Routing to 'flagged_for_review'.")
                 return "flagged_for_review"
-
         except Exception as e:
             print(f"⚠️  WipeDown check failed (non-fatal): {e}")
-
         return None
 
-    # ------------------------------------------------------------------
-    # Core text curation (always works on original content)
-    # ------------------------------------------------------------------
-    def curate_text(
-        self,
-        text: str,
-        category: str = "misc",
-        source: str = "unknown"
-    ) -> Optional[Dict[str, Any]]:
+    def curate_text(self, text: str, category: str = "misc", source: str = "unknown") -> Optional[Dict[str, Any]]:
         if not text or len(text.strip()) < 20:
             return None
-
         if should_reject_content(text):
             return None
 
@@ -87,7 +65,6 @@ class Curator:
         description = self._extract_description(text) or "No description extracted."
         code = self._extract_code_block(text)
 
-        # Run security check (only affects category)
         flagged_category = self._run_security_check(text)
         final_category = flagged_category or category
 
@@ -102,10 +79,6 @@ class Curator:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "wipedown_checked": self.enable_wipedown,
         }
-
-        if should_reject_content(json.dumps(component)):
-            return None
-
         return component
 
     def curate_file(self, filepath: str, category: str = "misc") -> Optional[Dict[str, Any]]:
@@ -113,19 +86,15 @@ class Curator:
         if not path.exists():
             print(f"❌ Curator: File not found: {filepath}")
             return None
-
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
         except Exception as e:
             print(f"❌ Curator: Failed to read file {filepath}: {e}")
             return None
 
-        # Security check on file content
         flagged = self._run_security_check(text)
         final_cat = flagged or category
-
-        component = self.curate_text(text, category=final_cat, source=f"file:{filepath}")
-        return component
+        return self.curate_text(text, category=final_cat, source=f"file:{filepath}")
 
     def curate_url(self, url: str, category: str = "misc") -> Optional[Dict[str, Any]]:
         try:
@@ -144,7 +113,6 @@ class Curator:
 
         flagged = self._run_security_check(text, is_url=True, target=url)
         final_cat = flagged or category
-
         return self.curate_text(text[:8000], category=final_cat, source=f"url:{url}")
 
     def _extract_name(self, text: str) -> Optional[str]:
@@ -178,8 +146,14 @@ class Curator:
         component = None
 
         if isinstance(content, dict):
-            component = content
+            if not validate_component(content):
+                return False
+            component = dict(content)
             component.setdefault("category", category)
+            if "quality_score" not in component:
+                text_for_scoring = str(component.get("full_code", "")) + " " + str(component.get("description", ""))
+                component["quality_score"] = score_component(text_for_scoring, component.get("full_code"))
+
         elif isinstance(content, str):
             if content.startswith(("http://", "https://")):
                 component = self.curate_url(content, category)
