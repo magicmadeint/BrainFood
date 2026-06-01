@@ -1,8 +1,8 @@
- """
+"""
 brainfood/curator/wipedown.py
 
 Native integration with WipeDown SDK (from malleable-cli branch).
-Replaces old subprocess approach with direct class usage.
+Updated to use canonical Curator.
 """
 
 from pathlib import Path
@@ -18,25 +18,20 @@ def curate_with_wipedown(
     target: str,
     category: str = "misc"
 ) -> Optional[Dict[str, Any]]:
-    """
-    Use native WipeDown engine and pass clean content to curator.
-    """
     if not WipeDown:
-        print("\u274c 'wipedown' package not found. Run 'pip install -e .' in wipedown repo.")
+        print("\u274c 'wipedown' package not found.")
         return None
 
     try:
         firewall = WipeDown()
 
         if target.startswith(("http://", "https://")):
-            print(f"\u2192 WipeDown scanning URL: {target}")
             result = firewall.wipe_url(target)
         else:
             path = Path(target).expanduser().resolve()
             if not path.exists():
                 print(f"\u274c File not found: {path}")
                 return None
-            print(f"\u2192 WipeDown scanning file: {path}")
             with open(path, "r", encoding="utf-8") as f:
                 file_text = f.read()
             result = firewall.wipe_text(file_text)
@@ -46,18 +41,16 @@ def curate_with_wipedown(
             return None
 
         if result.get("status") == "flagged":
-            print(f"\u26a0\ufe0f  WipeDown flagged content. Routing to 'flagged_for_review'.")
             category = "flagged_for_review"
 
         content = result.get("content", "")
 
-        from brainfood.curator.curator import Curator
+        from brainfood.core.curator import Curator
 
         return Curator().curate_text(
-            raw_text=content,
+            text=content,
             category=category,
-            source=result.get("source", target),
-            wipedown_metadata=result.get("metadata")
+            source=result.get("source", target)
         )
 
     except Exception as e:
