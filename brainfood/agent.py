@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 """
-BrainFoodAgent - Main public interface for BrainFood v0.1
-
-Wipedown is used only as a security status check (default = on).
-Flagged content goes to 'flagged_for_review' category instead of being rejected.
+BrainFoodAgent
 """
 from typing import Optional, Dict, Any, List
 
@@ -27,14 +24,25 @@ class BrainFoodAgent:
         return self.registry.get(category, name)
 
     def get_context(self, query: str, max_items: int = 5) -> List[Dict[str, Any]]:
-        results = []
+        if not query:
+            results = []
+            for cat in self.registry.list_categories():
+                results.extend(self.registry.list_by_category(cat)[:max_items])
+            return results[:max_items]
+
+        q = query.lower()
+        scored = []
         for cat in self.registry.list_categories():
             for comp in self.registry.list_by_category(cat):
-                if query.lower() in str(comp).lower():
-                    results.append(comp)
-                    if len(results) >= max_items:
-                        return results
-        return results
+                text = " ".join([
+                    str(comp.get("name", "")),
+                    str(comp.get("description", "")),
+                    str(comp.get("full_code", ""))
+                ]).lower()
+                if q in text:
+                    scored.append(comp)
+
+        return scored[:max_items]
 
     def score_atomic(self, category: str, name: str) -> float:
         return self.registry.score_atomic(category, name)
