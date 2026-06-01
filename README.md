@@ -6,17 +6,11 @@ Most memory systems are good at storing information, but weak at protecting qual
 
 **BrainFood** fixes the upstream problem. It applies strict quality gates and maintains a clean **Atomic Registry** of structured, high-value components that agents can actually trust and use.
 
-### The Goal
-
-BrainFood is built as a **thin, optional layer** — not another full memory platform. It’s designed to be **easy to drop into existing stacks** (Cognee, QMD, GBrain, LangGraph, custom agents, etc.) with minimal friction.
-
-You don’t have to rip out what you already have. You just get better quality and cleaner atomic components on top.
-
 ---
 
 ## Installation
 
-bash
+```bash
 git clone https://github.com/magicmadeint/BrainFood.git
 cd BrainFood
 git checkout v.0.1
@@ -24,56 +18,147 @@ git checkout v.0.1
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
+```
 
-Quick Start
-Pythonfrom brainfood.agent import BrainFoodAgent
+---
+
+## Quick Start
+
+```python
+from brainfood.agent import BrainFoodAgent
 
 brain = BrainFoodAgent()
 
-# Ingest a clean component
-component = {
+# Ingest from structured dict (recommended)
+brain.ingest({
     "name": "retry_with_backoff",
     "category": "development",
-    "language": "python",
     "full_code": "def retry_with_backoff(...): ...",
     "description": "Handles retries with exponential backoff"
-}
+})
 
-brain.ingest(component, category="development")
+# Ingest raw text
+brain.ingest("Useful markdown or code snippet...", category="development")
 
-# Retrieve it directly
+# Ingest from local file
+brain.ingest("/path/to/component.md", category="development")
+
+# Ingest from URL (basic fetching + cleaning)
+brain.ingest("https://example.com/article", category="misc")
+
+# Retrieve
 atomic = brain.get_atomic("development", "retry_with_backoff")
-
-# Get relevant context
-context = brain.get_context("error handling and retries")
-
-# Check quality score of a component
 score = brain.score_atomic("development", "retry_with_backoff")
+context = brain.get_context("error handling")
+```
 
-BrainFoodAgent API
+---
+
+## BrainFoodAgent API
+
+```python
 BrainFoodAgent(data_dir="~/.brainfood/registry")
-Create an agent. You can optionally pass a custom data_dir to change where atomic components are stored.
-ingest(content: dict, category: str = "misc") -> bool
-Ingest a component. It will be validated through Quality Gates before being saved.
-get_atomic(category: str, name: str) -> dict | None
-Retrieve a specific atomic component by category and name.
-get_context(query: str, max_items: int = 5) -> list[dict]
-Get relevant components using basic keyword-based relevance scoring.
-score_atomic(category: str, name: str) -> float
-Get the quality score (0.0 – 1.0) of a stored component. Higher = better.
+```
 
-Current Development Status
-For the latest checklist of what’s built vs what’s still in progress, see:
-→ v0.1-scope.md
+### Core Methods
 
-Project Philosophy
+| Method | Description |
+|--------|-------------|
+| `ingest(content, category="misc")` | Ingests dict, raw text, file path, or URL. Runs quality gates automatically. |
+| `get_atomic(category, name)` | Retrieve a specific high-signal component. |
+| `get_context(query, max_items=5)` | Basic keyword-based retrieval of relevant components. |
+| `score_atomic(category, name)` | Returns quality score (0.0–1.0) of a stored component. |
 
-Lean first — We optimize for easy integration over building everything ourselves.
-Quality over volume — We aggressively filter noise.
-Malleable by design — You should be able to use as much or as little as you want.
-Reference, not replacement — Works with (not instead of) tools like Cognee, QMD, and GBrain.
+---
 
+## For AI Agents (Integration Guide)
 
-License
+> **Read this section carefully.** This is the intended interface for agentic systems.
+
+BrainFood is designed as a **thin, trustworthy filter** you can place in front of (or alongside) your existing memory systems. Its job is to protect you from low-quality, stubby, or placeholder content.
+
+### Core Principles for Agents
+
+1. **Prefer structured dict input** when possible. This gives the highest signal.
+2. **Use `ingest()` as the single entry point** — it handles text, files, and URLs automatically.
+3. **Always check quality** before trusting retrieved components (`score_atomic` or inspect `quality_score`).
+4. **Treat BrainFood as a high-precision Atomic Registry**, not a full RAG system.
+
+### Recommended Usage Patterns
+
+#### Pattern 1: Structured Component Ingestion (Best)
+```python
+component = {
+    "name": "unique_component_name",
+    "category": "development",           # or quant_finance, biophysics_health, misc
+    "full_code": "...",                    # full working code when available
+    "description": "One-sentence purpose",
+    "quality_score": 0.92                  # optional, will be calculated if missing
+}
+brain.ingest(component)
+```
+
+#### Pattern 2: Raw Text / Markdown Ingestion
+```python
+brain.ingest(raw_markdown_or_code, category="development")
+```
+
+#### Pattern 3: Retrieving for Grounding
+```python
+# Get exact component
+comp = brain.get_atomic("development", "retry_with_backoff")
+
+# Get relevant context for a task
+context_pieces = brain.get_context("retry logic and error handling", max_items=5)
+```
+
+### Quality & Rejection Rules
+
+BrainFood will **hard reject** content containing:
+- `TODO`, `FIXME`, `placeholder`, `insert logic here`, `not implemented`, etc.
+- Very short or empty-looking content
+
+It will also refuse to overwrite a significantly higher-quality component with a lower-quality one.
+
+### Data Directory
+
+By default components are stored in `~/.brainfood/registry/`. You can override this:
+
+```python
+brain = BrainFoodAgent(data_dir="/custom/path/registry")
+```
+
+### Categories
+
+Use these category names for best results:
+- `development`
+- `quant_finance`
+- `biophysics_health`
+- `misc`
+
+---
+
+## Project Philosophy
+
+- **Lean first** — Easy to drop into existing stacks with minimal dependencies.
+- **Quality over volume** — Aggressive filtering of noise and stubs.
+- **Malleable by design** — Use as much or as little as you need.
+- **Reference, not replacement** — Works alongside Cognee, QMD, GBrain, LangGraph, etc.
+
+---
+
+## Current Status
+
+See `v0.1-scope.md` for the latest checklist of implemented vs planned features.
+
+**Recently hardened (v0.1.1):**
+- `AtomicRegistry.save()` now properly protects higher-quality components
+- `curate_file()` and `curate_url()` are fully functional
+- Improved name/description/code extraction
+- Cleaner quality scoring with early rejection
+
+---
+
+## License
+
 MIT
-text
