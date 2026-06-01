@@ -20,6 +20,8 @@ source .venv/bin/activate
 pip install -e .
 ```
 
+> **Optional but recommended:** `pip install wipedown` (from the malleable-cli branch) to enable security screening.
+
 ---
 
 ## Quick Start
@@ -27,29 +29,15 @@ pip install -e .
 ```python
 from brainfood.agent import BrainFoodAgent
 
-brain = BrainFoodAgent()
+brain = BrainFoodAgent()  # wipedown enabled by default
 
-# Ingest from structured dict (recommended)
 brain.ingest({
     "name": "retry_with_backoff",
     "category": "development",
-    "full_code": "def retry_with_backoff(...): ...",
-    "description": "Handles retries with exponential backoff"
+    "full_code": "def retry_with_backoff(...): ..."
 })
 
-# Ingest raw text
-brain.ingest("Useful markdown or code snippet...", category="development")
-
-# Ingest from local file
-brain.ingest("/path/to/component.md", category="development")
-
-# Ingest from URL (basic fetching + cleaning)
-brain.ingest("https://example.com/article", category="misc")
-
-# Retrieve
 atomic = brain.get_atomic("development", "retry_with_backoff")
-score = brain.score_atomic("development", "retry_with_backoff")
-context = brain.get_context("error handling")
 ```
 
 ---
@@ -57,105 +45,59 @@ context = brain.get_context("error handling")
 ## BrainFoodAgent API
 
 ```python
-BrainFoodAgent(data_dir="~/.brainfood/registry")
+BrainFoodAgent(data_dir="~/.brainfood/registry", enable_wipedown=True)
 ```
 
-### Core Methods
-
-| Method | Description |
-|--------|-------------|
-| `ingest(content, category="misc")` | Ingests dict, raw text, file path, or URL. Runs quality gates automatically. |
-| `get_atomic(category, name)` | Retrieve a specific high-signal component. |
-| `get_context(query, max_items=5)` | Basic keyword-based retrieval across all categories. |
-| `score_atomic(category, name)` | Returns quality score (0.0–1.0) of a stored component. |
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `enable_wipedown` | `True` | Run WipeDown security check before curation. Flagged content goes to `flagged_for_review`. |
 
 ---
 
 ## For AI Agents (Integration Guide)
 
-> **Read this section carefully.** This is the intended interface for agentic systems.
+### How Wipedown + BrainFood Work Together
 
-BrainFood is designed as a **thin, trustworthy filter** you can place in front of (or alongside) your existing memory systems. Its job is to protect you from low-quality, stubby, or placeholder content.
+Wipedown is used **only as a security classifier**.
 
-### Core Principles for Agents
+- BrainFood runs wipedown to get a simple status (clean vs flagged).
+- **BrainFood always curates the original content** (not wipedown’s sanitized version).
+- If wipedown flags something suspicious, the component is saved under the `flagged_for_review` category instead of being rejected.
+- This allows you (or another agent) to still inspect it later.
 
-1. **Prefer structured dict input** when possible. This gives the highest signal.
-2. **Use `ingest()` as the single entry point** — it handles text, files, and URLs automatically.
-3. **Always check quality** before trusting retrieved components (`score_atomic` or inspect `quality_score`).
-4. **Treat BrainFood as a high-precision Atomic Registry**, not a full RAG system.
+You can disable it completely:
 
-### Recommended Usage Patterns
-
-#### Pattern 1: Structured Component Ingestion (Best)
 ```python
-component = {
-    "name": "unique_component_name",
-    "category": "your_category_name",     # fully dynamic - use what makes sense for you
-    "full_code": "...",
-    "description": "One-sentence purpose",
-}
-brain.ingest(component)
+brain = BrainFoodAgent(enable_wipedown=False)
 ```
 
-#### Pattern 2: Raw Text / Markdown Ingestion
+### Recommended Patterns
+
 ```python
-brain.ingest(raw_markdown_or_code, category="your_category")
+# Normal ingestion (wipedown runs by default)
+brain.ingest(raw_text_or_url, category="development")
+
+# Force a specific category even if flagged
+brain.ingest(content, category="sensitive_research")
+
+# Retrieve flagged items for review
+flagged = brain.get_context("flagged_for_review")
 ```
-
-#### Pattern 3: Retrieving for Grounding
-```python
-comp = brain.get_atomic("your_category", "component_name")
-context_pieces = brain.get_context("retry logic", max_items=5)
-```
-
-### Categories Are Fully Dynamic
-
-You are **not** limited to any predefined set of categories. Use whatever taxonomy makes sense for your domain and workflow:
-
-- `development`, `backend`, `frontend`, `infra`
-- `trading`, `quant_finance`, `mev`
-- `health`, `biohacking`, `light_environment`
-- `research`, `papers`, `ideas`
-- Or anything else
-
-BrainFood will automatically create the necessary directories and discover categories at runtime.
 
 ### Quality & Rejection Rules
 
-BrainFood will **hard reject** content containing:
-- `TODO`, `FIXME`, `placeholder`, `insert logic here`, `not implemented`, etc.
-- Very short or empty-looking content
+BrainFood will **hard reject** content containing obvious low-quality markers (`TODO`, `placeholder`, stubs, etc).
 
-It will also refuse to overwrite a significantly higher-quality component with a lower-quality one.
-
-### Data Directory
-
-By default components are stored in `~/.brainfood/registry/`. You can override this:
-
-```python
-brain = BrainFoodAgent(data_dir="/custom/path/registry")
-```
+Wipedown-flagged content is **not rejected** — it is routed to `flagged_for_review` for later inspection.
 
 ---
 
 ## Project Philosophy
 
-- **Lean first** — Easy to drop into existing stacks with minimal dependencies.
-- **Quality over volume** — Aggressive filtering of noise and stubs.
-- **Malleable by design** — Use as much or as little as you need.
-- **Reference, not replacement** — Works alongside Cognee, QMD, GBrain, LangGraph, etc.
-
----
-
-## Current Status
-
-See `v0.1-scope.md` for the latest checklist.
-
-**Recently hardened:**
-- Categories are now fully dynamic (no hardcoded taxonomy)
-- `AtomicRegistry.save()` protects higher-quality components
-- `curate_file()` and `curate_url()` are fully functional
-- Improved extraction and quality scoring
+- Lean first
+- Quality over volume
+- Wipedown for security classification only
+- Categories are fully dynamic
 
 ---
 
