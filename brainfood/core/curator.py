@@ -117,9 +117,18 @@ class Curator:
                 return False
             comp = dict(content)
             comp.setdefault("category", category)
+
+            # Auto-derive description if missing
+            if not comp.get("description"):
+                if comp.get("full_code"):
+                    comp["description"] = comp["full_code"].split("\n")[0][:120].strip()
+                else:
+                    comp["description"] = comp.get("name", "No description")
+
             if "quality_score" not in comp:
                 txt = str(comp.get("full_code", "")) + " " + str(comp.get("description", ""))
                 comp["quality_score"] = score_component(txt, comp.get("full_code"))
+
             return self.registry.save(comp)
 
         if isinstance(content, str):
