@@ -1,48 +1,55 @@
-from typing import Dict, Any
+#!/usr/bin/env python3
+"""
+Quality Gates for BrainFood.
+
+Early rejection of low-signal / stub / placeholder content.
+"""
 import re
+from typing import Optional
+
+
+FORBIDDEN_PATTERNS = [
+    r"#\s*(TODO|FIXME|placeholder|insert logic|logic to find|rest of|implement)",
+    r"//\s*(TODO|FIXME|placeholder)",
+    r"pass\s*#\s*(logic|TODO|placeholder)",
+    r"raise NotImplementedError",
+    r"your (code|logic|implementation) here",
+]
+
 
 def should_reject_content(text: str) -> bool:
-    if not isinstance(text, str):
+    """Hard reject if content contains obvious placeholder or stub markers."""
+    if not text:
         return True
-    forbidden = [r'#\s*todo', r'#\s*placeholder', r'\bpass\s*#', 
-                 r'insert logic here', r'todo:', r'\\TODO', r'not implemented']
-    return any(re.search(p, text, re.IGNORECASE) for p in forbidden)
+    lowered = text.lower()
+    for pattern in FORBIDDEN_PATTERNS:
+        if re.search(pattern, lowered, re.IGNORECASE):
+            return True
+    if len(text.strip()) < 15:
+        return True
+    return False
 
-def validate_component(component: Dict[str, Any]) -> bool:
-    if not isinstance(component, dict):
-        return False
-    if not component.get("name"):
-        return False
-    text = str(component.get("full_code", "")) + str(component.get("description", ""))
-    return not should_reject_content(text)
 
-def score_component(component: Dict[str, Any]) -> float:
+def score_component(text: str, code: Optional[str] = None) -> float:
     """
-    Returns a quality score between 0.0 and 1.0.
-    Higher = better quality component.
+    Lightweight quality scoring (0.0 - 1.0).
+    Placeholder penalties removed because should_reject_content()
+    already hard-rejects those cases earlier.
     """
-    if not isinstance(component, dict):
+    if not text:
         return 0.0
 
-    score = 0.0
-    max_score = 5.0
+    score = 0.5
 
-    if component.get("name"):
-        score += 1.0
+    if code and len(code) > 50:
+        score += 0.25
 
-    full_code = str(component.get("full_code", ""))
-    if full_code and len(full_code) > 20:
-        score += 2.0
-        if len(full_code) > 100:
-            score += 0.5
+    if len(text) > 200:
+        score += 0.1
+    if "def " in text or "class " in text:
+        score += 0.1
 
-    if component.get("description") or component.get("title"):
-        score += 1.0
+    if text.count("example") > 3:
+        score -= 0.05
 
-    if component.get("dependencies"):
-        score += 0.5
-
-    if len(full_code) < 10:
-        score -= 1.0
-
-    return max(0.0, min(1.0, score / max_score))
+    return max(0.0, min(1.0, round(score, 2)))
