@@ -5,7 +5,7 @@ Quality Gates for BrainFood.
 Early rejection of low-signal / stub / placeholder content.
 """
 import re
-from typing import Optional
+from typing import Optional, Any, Dict
 
 
 FORBIDDEN_PATTERNS = [
@@ -30,25 +30,31 @@ def should_reject_content(text: str) -> bool:
     return False
 
 
+def validate_component(component: Any) -> bool:
+    """Backward compatible validation. Returns True if component looks usable."""
+    if not isinstance(component, dict):
+        return False
+    if not component.get("name"):
+        return False
+    # Basic quality check
+    text = str(component.get("full_code", "")) + str(component.get("description", ""))
+    return not should_reject_content(text)
+
+
 def score_component(text: str, code: Optional[str] = None) -> float:
     """
     Lightweight quality scoring (0.0 - 1.0).
-    Placeholder penalties removed because should_reject_content()
-    already hard-rejects those cases earlier.
     """
     if not text:
         return 0.0
 
     score = 0.5
-
     if code and len(code) > 50:
         score += 0.25
-
     if len(text) > 200:
         score += 0.1
     if "def " in text or "class " in text:
         score += 0.1
-
     if text.count("example") > 3:
         score -= 0.05
 
