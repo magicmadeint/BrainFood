@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
 Quality Gates for BrainFood.
+
+- should_reject_content(): For raw text (applies length + forbidden patterns)
+- validate_component(): For structured dicts (more lenient, structure-focused)
 """
 import re
 from typing import Optional, Any, Dict
 
 
 FORBIDDEN_PATTERNS = [
-    r"#\s*(TODO|FIXME|placeholder|insert logic|logic to find|rest of|implement)",
-    r"//\s*(TODO|FIXME|placeholder)",
-    r"\bTODO\b[:\s]",           # catches raw "TODO:" patterns
+    r"\bplaceholder\b",
+    r"#\s*(TODO|FIXME|insert logic|logic to find|rest of|implement)",
+    r"//\s*(TODO|FIXME)",
+    r"\bTODO\b[:\s]",
     r"\bFIXME\b",
     r"pass\s*#\s*(logic|TODO|placeholder)",
     r"raise NotImplementedError",
@@ -18,6 +22,7 @@ FORBIDDEN_PATTERNS = [
 
 
 def should_reject_content(text: str) -> bool:
+    """For raw text ingestion. Applies both length and pattern checks."""
     if not text:
         return True
     lowered = text.lower()
@@ -30,13 +35,27 @@ def should_reject_content(text: str) -> bool:
 
 
 def validate_component(component: Any) -> bool:
-    """More lenient: only rejects if name is missing or obvious low-quality markers are present."""
+    """
+    For dict ingestion. More lenient than should_reject_content.
+    Only rejects if:
+    - Not a dict
+    - Missing name
+    - Contains obvious forbidden patterns
+    Does NOT apply the 15-char length check.
+    """
     if not isinstance(component, dict):
         return False
     if not component.get("name"):
         return False
+
     text = str(component.get("full_code", "")) + " " + str(component.get("description", ""))
-    return not should_reject_content(text)
+    lowered = text.lower()
+
+    for pattern in FORBIDDEN_PATTERNS:
+        if re.search(pattern, lowered, re.IGNORECASE):
+            return False
+
+    return True
 
 
 def score_component(text: str, code: Optional[str] = None) -> float:
