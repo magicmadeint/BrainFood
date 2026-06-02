@@ -42,6 +42,8 @@ class BrainFoodAgent:
                 if q in text:
                     scored.append(comp)
 
+        # Sort by quality_score descending so higher-quality components surface first.
+        scored.sort(key=lambda x: float(x.get("quality_score", 0.0)), reverse=True)
         return scored[:max_items]
 
     def score_atomic(self, category: str, name: str) -> float:

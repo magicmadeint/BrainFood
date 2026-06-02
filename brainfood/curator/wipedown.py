@@ -16,8 +16,20 @@ except ImportError:
 
 def curate_with_wipedown(
     target: str,
-    category: str = "misc"
+    category: str = "misc",
+    registry=None,
+    enable_wipedown: bool = True,
 ) -> Optional[Dict[str, Any]]:
+    """Curate content through WipeDown security classification.
+
+    Args:
+        target: URL or local file path to curate.
+        category: Target category (may be overridden to 'flagged_for_review').
+        registry: Optional pre-configured AtomicRegistry. If None, uses the
+            default ``~/.brainfood/registry``. Passing a custom registry ensures
+            the output lands in the user's configured data directory.
+        enable_wipedown: Whether to run WipeDown classification (default True).
+    """
     if not WipeDown:
         print("\u274c 'wipedown' package not found.")
         return None
@@ -47,10 +59,10 @@ def curate_with_wipedown(
 
         from brainfood.core.curator import Curator
 
-        return Curator().curate_text(
+        return Curator(registry=registry, enable_wipedown=enable_wipedown).curate_text(
             text=content,
             category=category,
-            source=result.get("source", target)
+            source=result.get("source", target),
         )
 
     except Exception as e:

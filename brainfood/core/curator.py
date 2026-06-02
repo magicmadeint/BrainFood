@@ -146,6 +146,10 @@ class Curator:
                 txt = str(comp.get("full_code", "")) + " " + str(comp.get("description", ""))
                 comp["quality_score"] = score_component(txt, comp.get("full_code"))
 
+            # Validated dicts are structurally sound — apply a floor so short but
+            # high-signal snippets aren't permanently locked out by the score gap.
+            comp["quality_score"] = max(comp["quality_score"], 0.75)
+
             return self.registry.save(comp)
 
         if isinstance(content, str):

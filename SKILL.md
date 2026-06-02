@@ -68,7 +68,7 @@ brain = BrainFoodAgent(
 |--------|-----------|---------|
 | `ingest(content, category=...)` | `content` (dict, str, file path, or URL) | Main entry point. Ingestion priority: Dict > String > File > URL |
 | `get_atomic(category, name)` | `category`, `name` | Retrieve exact component by key |
-| `get_context(query, max_items=5)` | `query` (string), `max_items` (int) | Keyword search across all categories |
+| `get_context(query, max_items=5)` | `query` (string), `max_items` (int) | Keyword search — results sorted by quality_score descending |
 | `score_atomic(category, name)` | `category`, `name` | Get quality score (0.0–1.0) |
 | `registry.list_categories()` | — | List all category names in the registry |
 
@@ -131,6 +131,8 @@ Dicts are validated differently — only rejected if:
 **Key:** BrainFood **always** curates the **original** content, never WipeDown's sanitized version. WipeDown only affects the category assignment.
 
 **If flagged:** BrainFood prints a warning explaining that flagging is automated and false positives are possible. Your original content is preserved in `flagged_for_review` for manual review — nothing was deleted or corrupted.
+
+**Note on `brainfood.curator.wipedown.curate_with_wipedown`:** This standalone function accepts `registry=` and `enable_wipedown=` parameters to pass through to the Curator, so you can supply a custom data directory instead of relying on the default `~/.brainfood/registry`.
 
 ---
 

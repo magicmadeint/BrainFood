@@ -9,9 +9,21 @@ class AtomicRegistry:
         self.base_path = Path(data_dir).expanduser()
         self.base_path.mkdir(parents=True, exist_ok=True)
 
+    def _validate_category(self, category: str) -> str:
+        """Validate category name to prevent path traversal."""
+        if not category:
+            raise ValueError("Category name cannot be empty")
+        clean = category.strip("/\\")
+        if ".." in clean:
+            raise ValueError(f"Invalid category name: {category!r}")
+        return clean
+
     def _ensure_category(self, category: str) -> Path:
         """Ensure category directory exists (supports nested categories with /)."""
-        cat_path = self.base_path / category
+        self._validate_category(category)
+        cat_path = (self.base_path / category).resolve()
+        if not str(cat_path).startswith(str(self.base_path.resolve())):
+            raise ValueError(f"Invalid category name: {category!r}")
         cat_path.mkdir(parents=True, exist_ok=True)
         return cat_path
 
@@ -19,7 +31,11 @@ class AtomicRegistry:
         category = component.get("category", "misc")
         name = component.get("name", "unnamed")
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
-        return self._ensure_category(category) / f"{safe_name}.json"
+        cat_path = self._ensure_category(category)
+        resolved = (cat_path / f"{safe_name}.json").resolve()
+        if not str(resolved).startswith(str(self.base_path.resolve())):
+            raise ValueError(f"Invalid category or name in component")
+        return resolved
 
     def save(self, component: Dict[str, Any]) -> bool:
         filepath = self._get_path(component)
@@ -55,8 +71,10 @@ class AtomicRegistry:
             return False
 
     def get(self, category: str, name: str) -> Optional[Dict[str, Any]]:
+        self._validate_category(category)
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
-        filepath = self.base_path / category / f"{safe_name}.json"
+        cat_path = (self.base_path / category)
+        filepath = cat_path / f"{safe_name}.json"
         if not filepath.exists():
             return None
         try:
@@ -65,6 +83,7 @@ class AtomicRegistry:
             return None
 
     def list_by_category(self, category: str) -> List[Dict[str, Any]]:
+        self._validate_category(category)
         cat_path = self.base_path / category
         if not cat_path.exists():
             return []
