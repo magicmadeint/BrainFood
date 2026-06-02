@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 try:
-    from wipedown import WipeDown
+    from wipedown.engine import WipeDown
 except ImportError:
     WipeDown = None
 
