@@ -134,6 +134,9 @@ class Curator:
         if isinstance(content, str):
             if content.startswith(("http://", "https://")):
                 comp = self.curate_url(content, category)
+            elif content.startswith("file://"):
+                p = Path(content[7:])
+                comp = self.curate_file(str(p.resolve()), category) if p.exists() else self.curate_text(content, category=category)
             else:
                 p = Path(content)
                 comp = self.curate_file(content, category) if p.exists() else self.curate_text(content, category=category)
