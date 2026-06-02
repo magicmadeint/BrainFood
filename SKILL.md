@@ -98,9 +98,9 @@ BrainFood hard-rejects content containing **any** of these (case-insensitive):
 #\s*(TODO|FIXME|insert logic|logic to find|rest of|implement)
 //\s*(TODO|FIXME)
 \bTODO\b[:\s]
-\bFIXME\b
+\bFIXME\b\s*[:\s]
 pass\s*#\s*(logic|TODO|placeholder)
-raise NotImplementedError
+\braise\s+NotImplementedError\b
 your (code|logic|implementation) here
 ```
 

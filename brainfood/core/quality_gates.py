@@ -10,13 +10,18 @@ from typing import Optional, Any, Dict
 
 
 FORBIDDEN_PATTERNS = [
-    r"\bplaceholder\b",
+    # Stub markers
+    r"\braise\s+NotImplementedError\b",
+    r"pass\s*#\s*(logic|TODO|placeholder|implement)",
+    # TODO/FIXME patterns (code comments)
     r"#\s*(TODO|FIXME|insert logic|logic to find|rest of|implement)",
     r"//\s*(TODO|FIXME)",
     r"\bTODO\b[:\s]",
-    r"\bFIXME\b",
-    r"pass\s*#\s*(logic|TODO|placeholder)",
-    r"raise NotImplementedError",
+    r"\bFIXME\b\s*[:\s]",
+    # Placeholder markers (bracketed or standalone, not prose)
+    r"\[placeholder\]",
+    r"^\s*#\s*placeholder\s*$",
+    # Template boilerplate
     r"your (code|logic|implementation) here",
 ]
 
