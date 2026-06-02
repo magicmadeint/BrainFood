@@ -33,19 +33,33 @@ class Curator:
             self._wipedown = False
         return self._wipedown
 
-    def _run_security_check(self, text: str, is_url: bool = False, target: str = "") -> Optional[str]:
+    def _run_security_check(self, text: str, is_url: bool = False, target: str = "") -> tuple:
+        """Run WipeDown security classification.
+
+        Returns:
+            (category_override_or_None, warning_message_or_None)
+            The category is only overridden to 'flagged_for_review' if WipeDown
+            flags the content. This does NOT mean the content is malicious —
+            false positives are possible. The original content is always preserved
+            in the flagged category for manual review.
+        """
         if not self.enable_wipedown:
-            return None
+            return (None, None)
         wipedown = self._get_wipedown()
         if not wipedown:
-            return None
+            return (None, None)
         try:
             result = wipedown.wipe_url(target) if is_url else wipedown.wipe_text(text)
             if result.get("status", "success").lower() not in ("success", "clean"):
-                return "flagged_for_review"
+                return ("flagged_for_review", (
+                    "⚠️  BrainFood WipeDown: Content flagged by security classifier.\n"
+                    "  → Moved to 'flagged_for_review' for manual review.\n"
+                    "  → This is an automated check; false positives are possible.\n"
+                    "  → Your original content is preserved and safe. It was NOT deleted or corrupted."
+                ))
         except Exception:
             pass
-        return None
+        return (None, None)
 
     def curate_text(self, text: str, category: str = "misc", source: str = "unknown") -> Optional[Dict[str, Any]]:
         if not text or len(text.strip()) < 15:
@@ -57,7 +71,10 @@ class Curator:
         description = self._extract_description(text) or "No description extracted."
         code = self._extract_code_block(text)
 
-        final_category = self._run_security_check(text) or category
+        category_override, warning = self._run_security_check(text)
+        final_category = category_override or category
+        if warning:
+            print(warning)
 
         return {
             "name": name,

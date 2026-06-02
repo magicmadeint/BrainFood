@@ -31,8 +31,15 @@ class AtomicRegistry:
                 new_score = float(component.get("quality_score", 0.0))
 
                 if existing_score > new_score + 0.15:
-                    print(f"⚠️  AtomicRegistry: Skipping write for '{component.get('name')}'. Existing score higher.")
+                    print(f"⚠️  AtomicRegistry: Skipping write for '{component.get('name')}'. Existing score higher ({existing_score} vs {new_score}).")
                     return False
+
+                # Preserve existing fields that aren't in the new component.
+                # This prevents accidental loss of manually added metadata,
+                # notes, or custom keys when overwriting a higher-scoring version.
+                for key, value in existing.items():
+                    if key not in component:
+                        component[key] = value
             except Exception:
                 pass
 

@@ -124,23 +124,27 @@ Dicts are validated differently — only rejected if:
 
 | Scenario | Behavior |
 |----------|----------|
-| `enable_wipedown=True` + WipeDown installed | Security classification runs; flagged → `flagged_for_review` |
+| `enable_wipedown=True` + WipeDown installed | Security classification runs; flagged → `flagged_for_review` with clear warning |
 | `enable_wipedown=True` + WipeDown **not** installed | Gracefully skips (no crash). Category unchanged. |
 | `enable_wipedown=False` | Security check disabled entirely. Category unchanged. |
 
 **Key:** BrainFood **always** curates the **original** content, never WipeDown's sanitized version. WipeDown only affects the category assignment.
 
+**If flagged:** BrainFood prints a warning explaining that flagging is automated and false positives are possible. Your original content is preserved in `flagged_for_review` for manual review — nothing was deleted or corrupted.
+
 ---
 
 ## Known Gotchas
 
-1. **Dict ingestion does NOT auto-derive description** — `curate_text()` extracts a description from text input, but `ingest(dict)` does not add one if missing. Provide `"description"` in your dict if you want one.
+1. **Dict ingestion now auto-derives description** — If `"description"` is missing from your dict, BrainFood pulls the first line of `"full_code"` as a fallback.
 
 2. **Short but valid code snippets are accepted via dict** — The 15-char length check only applies to raw text, not structured dicts.
 
-3. **Run tests after changes:** `python3 test_comprehensive.py`
+3. **Metadata preservation** — When overwriting an existing component (score within 0.15 tolerance), BrainFood preserves fields from the existing record that aren't in the new one. This prevents accidental loss of manually added metadata, notes, or custom keys.
 
-4. **Namespace collision was fixed** — The old `brainfood/agent/` directory has been removed to prevent import ambiguity.
+4. **Run tests after changes:** `python3 test_comprehensive.py`
+
+5. **Namespace collision was fixed** — The old `brainfood/agent/` directory has been removed to prevent import ambiguity.
 
 ---
 
